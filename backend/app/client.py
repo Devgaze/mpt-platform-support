@@ -205,9 +205,6 @@ class MPTClient:
     async def get_token(self, user_id: str, select: list[str] | None = None) -> dict[str, Any]:
         return await self.get("accounts/api-tokens", user_id, select=select)
 
-    async def get_order(self, order_id: str, select: list[str] | None = None) -> dict[str, Any]:
-        return await self.get("commerce/orders", order_id, select=select)
-
     async def get_task(self, task_id: str, select: list[str] | None = None) -> dict[str, Any]:
         return await self.get("system/tasks", task_id, select=select)
 
@@ -222,47 +219,6 @@ class MPTClient:
 
     async def reschedule_task(self, task_id: str) -> dict[str, Any]:
         return await self.run_object_action("system/tasks", task_id, "reschedule")
-
-    async def get_helpdesk_case(self, case_id: str) -> dict[str, Any]:
-        return await self.get(
-            "helpdesk/cases",
-            case_id,
-            "id,chat,queue,parameters,audit,status,account,reporter,assignee".split(","),
-        )
-
-    async def get_helpdesk_parameters_by_external_ids(
-        self, external_ids: list[str]
-    ) -> list[dict[str, Any]]:
-        quoted_external_ids = ",".join(external_ids)
-        page = await self.get_collection(
-            "helpdesk/parameters",
-            query=f'and(eq(scope,"Case"),in(externalId,({quoted_external_ids})))',
-            select="id,name,externalId,type,multiple,constraints,displayOrder".split(
-                ","
-            ),
-         )
-        return page["data"]
-    
-    async def get_extension_contact_by_display_name(self) -> dict[str, Any]:
-        return await self.collection_iterator(
-            "/notifications/contacts",
-            "eq(email,{settings.helpdesk.extension_contact_email})",
-            "id,contact,account,status".split(','),
-        )
-
-    async def get_helpdesk_chat_participants(self, chat_id: str) -> dict[str, Any]:
-        self.g
-        return await self.get(
-            f"/helpdesk/chats/{chat_id}/participants",
-            "",
-            "id,contact,account,status".split(','),
-        )
-
-    async def add_helpdesk_chat_participant(self, chat_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return await self.update(
-            f"/helpdesk/chats/{chat_id}/participants",
-            "",
-            payload)
 
 @cache
 def get_installation_client(account_id: str) -> MPTClient:
