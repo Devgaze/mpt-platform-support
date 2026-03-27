@@ -9,4 +9,5 @@ settings: Settings = Dynaconf(
     root_path=Path(__file__).parent.parent.parent.resolve(),
     envvar_prefix="EXT",
     settings_files=["settings.yaml", ".secrets.yaml"],
+    merged_enabled=True
 )
