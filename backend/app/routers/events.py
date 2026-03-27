@@ -1,9 +1,7 @@
 import logging
-from http import client
 
 from fastapi import APIRouter
 
-from app import client
 from app.auth import AuthContext
 from app.client import ExtensionClient, InstallationClient
 from app.schema import Event, EventResponse
