@@ -55,6 +55,7 @@ class MPTInstallationAuth(httpx.Auth):
         """Updates tokens after a successful refresh."""
         if response.status_code == 200:
             data = response.json()
+            # print(data["token"])
             self.token_info = TokenInfo(data["token"])
 
 
@@ -88,7 +89,7 @@ class MPTClient:
         self,
         endpoint: str,
         id: str,
-        select: list | None = None,
+        select: list | None = None
     ) -> dict[str, Any]:
         url = f"{endpoint}/{id}"
         if select:
@@ -160,6 +161,18 @@ class MPTClient:
         finally:
             await response.aclose()
 
+    async def get_collection(
+        self,
+        endpoint: str,
+        query: str,
+        select: list[str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.get_page(endpoint, settings.rows_per_page, 0, query=query, select=select)
+
+    async def get_first(self, endpoint: str, query: str, select: list[str] | None = None) -> dict[str, Any] | None:
+        page = await self.get_collection(endpoint, query=query, select=select)
+        return page["data"][0] if page["data"] else None
+    
     async def collection_iterator(
         self,
         endpoint: str,
@@ -210,11 +223,46 @@ class MPTClient:
     async def reschedule_task(self, task_id: str) -> dict[str, Any]:
         return await self.run_object_action("system/tasks", task_id, "reschedule")
 
-    def get_orders(
-        self, query: str | None = None, select: list[str] | None = None
-    ) -> AsyncGenerator[dict[str, Any], None]:
-        return self.collection_iterator("commerce/orders", query=query, select=select)
+    async def get_helpdesk_case(self, case_id: str) -> dict[str, Any]:
+        return await self.get(
+            "helpdesk/cases",
+            case_id,
+            "id,chat,queue,parameters,audit,status,account,reporter,assignee".split(","),
+        )
 
+    async def get_helpdesk_parameters_by_external_ids(
+        self, external_ids: list[str]
+    ) -> list[dict[str, Any]]:
+        quoted_external_ids = ",".join(external_ids)
+        page = await self.get_collection(
+            "helpdesk/parameters",
+            query=f'and(eq(scope,"Case"),in(externalId,({quoted_external_ids})))',
+            select="id,name,externalId,type,multiple,constraints,displayOrder".split(
+                ","
+            ),
+         )
+        return page["data"]
+    
+    async def get_extension_contact_by_display_name(self) -> dict[str, Any]:
+        return await self.collection_iterator(
+            "/notifications/contacts",
+            "eq(email,{settings.helpdesk.extension_contact_email})",
+            "id,contact,account,status".split(','),
+        )
+
+    async def get_helpdesk_chat_participants(self, chat_id: str) -> dict[str, Any]:
+        self.g
+        return await self.get(
+            f"/helpdesk/chats/{chat_id}/participants",
+            "",
+            "id,contact,account,status".split(','),
+        )
+
+    async def add_helpdesk_chat_participant(self, chat_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        return await self.update(
+            f"/helpdesk/chats/{chat_id}/participants",
+            "",
+            payload)
 
 @cache
 def get_installation_client(account_id: str) -> MPTClient:
